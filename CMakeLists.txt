@@ -207,9 +207,13 @@ add_subdirectory(sqlite)
 
 add_subdirectory(tddb)
 
-add_subdirectory(test)
+option(TD_SKIP_TEST "Use \"ON\" to skip building/running the test harness.")
+if (NOT TD_SKIP_TEST)
+  add_subdirectory(test)
+endif()
 
-if (NOT CMAKE_CROSSCOMPILING)
+option(TD_SKIP_BENCHMARK "Use \"ON\" to skip building/running the benchmarks.")
+if (NOT CMAKE_CROSSCOMPILING AND NOT TD_SKIP_BENCHMARK)
   add_subdirectory(benchmark)
 endif()
 
@@ -468,6 +472,7 @@ set(TDLIB_SOURCE
   td/telegram/StickersManager.cpp
   td/telegram/StickerType.cpp
   td/telegram/StorageManager.cpp
+  td/telegram/MemoryManager.cpp
   td/telegram/SuggestedAction.cpp
   td/telegram/Support.cpp
   td/telegram/Td.cpp
@@ -755,6 +760,7 @@ set(TDLIB_SOURCE
   td/telegram/StickersManager.h
   td/telegram/StickerType.h
   td/telegram/StorageManager.h
+  td/telegram/MemoryManager.h
   td/telegram/SuggestedAction.h
   td/telegram/Support.h
   td/telegram/Td.h
@@ -992,6 +998,8 @@ endif()
 
 #EXECUTABLES
 if (NOT CMAKE_CROSSCOMPILING)
+option(TD_SKIP_TG_CLI "Use \"ON\" to skip building tg_cli.")
+if (NOT CMAKE_CROSSCOMPILING AND NOT TD_SKIP_TG_CLI)
   add_executable(tg_cli td/telegram/cli.cpp ${TL_TD_JSON_SOURCE})
 
   if (NOT READLINE_FOUND)
@@ -1021,6 +1029,7 @@ if (NOT CMAKE_CROSSCOMPILING)
   endif()
   target_link_libraries(tg_cli PRIVATE memprof tdclient tdcore)
   add_dependencies(tg_cli tl_generate_json)
+endif()
 endif()
 
 #Exported libraries
