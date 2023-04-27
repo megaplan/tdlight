@@ -164,6 +164,7 @@ class MessagesManager final : public Actor {
   MessagesManager &operator=(MessagesManager &&) = delete;
   ~MessagesManager() final;
 
+  void memory_stats(vector<string> &output);
   tl_object_ptr<telegram_api::InputPeer> get_input_peer(DialogId dialog_id, AccessRights access_rights) const;
 
   static tl_object_ptr<telegram_api::InputPeer> get_input_peer_force(DialogId dialog_id);
