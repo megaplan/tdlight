@@ -83,7 +83,8 @@ class GetBackgroundsQuery final : public Td::ResultHandler {
   }
 
   void send() {
-    send_query(G()->net_query_creator().create(telegram_api::account_getWallPapers(0)));
+    // send_query(G()->net_query_creator().create(telegram_api::account_getWallPapers(0)));
+    promise_.set_error(std::move(Status::Error("backgrounds disabled")));
   }
 
   void on_result(BufferSlice packet) final {

@@ -1240,7 +1240,7 @@ class StickersManager final : public Actor {
 
   double animated_emoji_zoom_ = 0.0;
 
-  bool disable_animated_emojis_ = false;
+  bool disable_animated_emojis_ = true;
 };
 
 }  // namespace td

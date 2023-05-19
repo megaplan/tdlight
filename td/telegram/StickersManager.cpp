@@ -1739,6 +1739,8 @@ void StickersManager::init() {
   LOG(INFO) << "Init StickersManager";
   is_inited_ = true;
 
+  return;
+
   {
     auto &sticker_set = add_special_sticker_set(SpecialStickerSetType::animated_emoji());
     if (G()->is_test_dc()) {

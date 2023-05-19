@@ -3359,8 +3359,9 @@ class GetUserPhotosQuery final : public Td::ResultHandler {
     user_id_ = user_id;
     offset_ = offset;
     limit_ = limit;
-    send_query(G()->net_query_creator().create(
-        telegram_api::photos_getUserPhotos(std::move(input_user), offset, photo_id, limit)));
+    promise_.set_error(std::move(Status::Error("downdload user photo disabled")));
+    // send_query(G()->net_query_creator().create(
+    //     telegram_api::photos_getUserPhotos(std::move(input_user), offset, photo_id, limit)));
   }
 
   void on_result(BufferSlice packet) final {
