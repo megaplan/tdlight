@@ -4113,8 +4113,8 @@ void FileManager::memory_stats(vector<string> &output) {
   output.push_back("\"file_hash_to_file_id_\":"); output.push_back(std::to_string(file_hash_to_file_id_.calc_size()));
   output.push_back(",");
   output.push_back("\"empty_file_ids_\":"); output.push_back(std::to_string(empty_file_ids_.size()));
-  output.push_back(",");
-  output.push_back("\"pmc_id_to_file_node_id_\":"); output.push_back(std::to_string(pmc_id_to_file_node_id_.size()));
+//  output.push_back(",");
+//  output.push_back("\"pmc_id_to_file_node_id_\":"); output.push_back(std::to_string(pmc_id_to_file_node_id_.size()));
 }
 
 void FileManager::tear_down() {
