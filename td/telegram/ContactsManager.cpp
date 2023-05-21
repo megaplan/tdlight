@@ -12920,12 +12920,14 @@ void ContactsManager::on_get_chat_full(tl_object_ptr<telegram_api::ChatFull> &&c
       channel_full->need_save_to_database = true;
     }
 
-    auto photo = get_photo(td_, std::move(channel->chat_photo_), DialogId(channel_id));
-    // on_update_channel_photo should be a no-op if server sent consistent data
-    on_update_channel_photo(
-        c, channel_id, as_dialog_photo(td_->file_manager_.get(), DialogId(channel_id), c->access_hash, photo, false),
-        false);
-    on_update_channel_full_photo(channel_full, channel_id, std::move(photo));
+    if (!G()->get_option_boolean("disable_minithumbnails")) {
+      auto photo = get_photo(td_, std::move(channel->chat_photo_), DialogId(channel_id));
+      // on_update_channel_photo should be a no-op if server sent consistent data
+      on_update_channel_photo(
+          c, channel_id, as_dialog_photo(td_->file_manager_.get(), DialogId(channel_id), c->access_hash, photo, false),
+          false);
+      on_update_channel_full_photo(channel_full, channel_id, std::move(photo));
+    }
 
     td_->messages_manager_->on_read_channel_outbox(channel_id,
                                                    MessageId(ServerMessageId(channel->read_outbox_max_id_)));
@@ -13174,6 +13176,10 @@ void ContactsManager::on_update_user_phone_number(User *u, UserId user_id, strin
 
 void ContactsManager::on_update_user_photo(User *u, UserId user_id,
                                            tl_object_ptr<telegram_api::UserProfilePhoto> &&photo, const char *source) {
+  if (!G()->get_option_boolean("disable_minithumbnails")) {
+    return ;
+  }
+
   if (td_->auth_manager_->is_bot() && !G()->use_chat_info_database()) {
     if (!u->is_photo_inited) {
       if (photo != nullptr && photo->get_id() == telegram_api::userProfilePhoto::ID) {
@@ -13212,6 +13218,10 @@ void ContactsManager::on_update_user_photo(User *u, UserId user_id,
 
 void ContactsManager::do_update_user_photo(User *u, UserId user_id,
                                            tl_object_ptr<telegram_api::UserProfilePhoto> &&photo, const char *source) {
+  if (G()->get_option_boolean("disable_minithumbnails")) {
+    return;
+  }
+
   ProfilePhoto new_photo = get_profile_photo(td_->file_manager_.get(), user_id, u->access_hash, std::move(photo));
   if (td_->auth_manager_->is_bot()) {
     new_photo.minithumbnail.clear();
@@ -13221,6 +13231,10 @@ void ContactsManager::do_update_user_photo(User *u, UserId user_id,
 
 void ContactsManager::do_update_user_photo(User *u, UserId user_id, ProfilePhoto &&new_photo,
                                            bool invalidate_photo_cache, const char *source) {
+  if (G()->get_option_boolean("disable_minithumbnails")) {
+    return;
+  }
+
   u->is_photo_inited = true;
   if (need_update_profile_photo(u->photo, new_photo)) {
     LOG_IF(ERROR, u->access_hash == -1 && new_photo.small_file_id.is_valid())
@@ -13265,6 +13279,10 @@ void ContactsManager::register_suggested_profile_photo(const Photo &photo) {
 }
 
 void ContactsManager::register_user_photo(User *u, UserId user_id, const Photo &photo) {
+  if (G()->get_option_boolean("disable_minithumbnails")) {
+    return;
+  }
+
   auto photo_file_ids = photo_get_file_ids(photo);
   if (photo.is_empty() || photo_file_ids.empty()) {
     return;
@@ -15623,6 +15641,9 @@ void ContactsManager::drop_chat_full(ChatId chat_id) {
 
 void ContactsManager::on_update_channel_photo(Channel *c, ChannelId channel_id,
                                               tl_object_ptr<telegram_api::ChatPhoto> &&chat_photo_ptr) {
+  if (G()->get_option_boolean("disable_minithumbnails")) {
+    return;
+  }
   on_update_channel_photo(
       c, channel_id,
       get_dialog_photo(td_->file_manager_.get(), DialogId(channel_id), c->access_hash, std::move(chat_photo_ptr)),
@@ -15633,6 +15654,10 @@ void ContactsManager::on_update_channel_photo(Channel *c, ChannelId channel_id, 
                                               bool invalidate_photo_cache) {
   if (td_->auth_manager_->is_bot()) {
     photo.minithumbnail.clear();
+  }
+
+  if (G()->get_option_boolean("disable_minithumbnails")) {
+    return;
   }
 
   if (need_update_dialog_photo(c->photo, photo)) {

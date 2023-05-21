@@ -3049,11 +3049,13 @@ void UpdatesManager::on_update(tl_object_ptr<telegram_api::updateNewMessage> upd
 }
 
 void UpdatesManager::on_update(tl_object_ptr<telegram_api::updateNewChannelMessage> update, Promise<Unit> &&promise) {
-  DialogId dialog_id = DialogId::get_message_dialog_id(update->message_);
-  int new_pts = update->pts_;
-  int pts_count = update->pts_count_;
-  td_->messages_manager_->add_pending_channel_update(dialog_id, std::move(update), new_pts, pts_count,
-                                                     std::move(promise), "updateNewChannelMessage");
+  if (!G()->get_option_boolean("disable_channels")) {
+    DialogId dialog_id = DialogId::get_message_dialog_id(update->message_);
+    int new_pts = update->pts_;
+    int pts_count = update->pts_count_;
+    td_->messages_manager_->add_pending_channel_update(dialog_id, std::move(update), new_pts, pts_count,
+                                                       std::move(promise), "updateNewChannelMessage");
+  }
 }
 
 void UpdatesManager::on_update(tl_object_ptr<telegram_api::updateMessageID> update, Promise<Unit> &&promise) {

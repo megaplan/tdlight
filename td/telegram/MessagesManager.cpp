@@ -1125,11 +1125,13 @@ class EditDialogPhotoQuery final : public Td::ResultHandler {
             telegram_api::messages_editChatPhoto(dialog_id.get_chat_id().get(), std::move(input_chat_photo))));
         break;
       case DialogType::Channel: {
-        auto channel_id = dialog_id.get_channel_id();
-        auto input_channel = td_->contacts_manager_->get_input_channel(channel_id);
-        CHECK(input_channel != nullptr);
-        send_query(G()->net_query_creator().create(
-            telegram_api::channels_editPhoto(std::move(input_channel), std::move(input_chat_photo))));
+        if (!G()->get_option_boolean("disable_channels")) {
+          auto channel_id = dialog_id.get_channel_id();
+          auto input_channel = td_->contacts_manager_->get_input_channel(channel_id);
+          CHECK(input_channel != nullptr);
+          send_query(G()->net_query_creator().create(
+              telegram_api::channels_editPhoto(std::move(input_channel), std::move(input_chat_photo))));
+        }
         break;
       }
       default:
@@ -15897,7 +15899,7 @@ void MessagesManager::on_get_dialogs(FolderId folder_id, vector<tl_object_ptr<te
             set_dialog_last_message_id(d, d->last_new_message_id, source);
             send_update_chat_last_message(d, source);
           }
-        } else if (dialog_id.get_type() == DialogType::Channel) {
+        } else if (dialog_id.get_type() == DialogType::Channel && !G()->get_option_boolean("disable_channels")) {
           get_channel_difference(dialog_id, d->pts, true, source);
         }
       }
@@ -18321,6 +18323,9 @@ void MessagesManager::on_get_message_viewers(DialogId dialog_id, MessageViewers 
         case DialogType::Chat:
           return td_->contacts_manager_->reload_chat_full(dialog_id.get_chat_id(), std::move(query_promise));
         case DialogType::Channel:
+          if (G()->get_option_boolean("disable_channels")) {
+            return;
+          }
           return td_->contacts_manager_->get_channel_participants(
               dialog_id.get_channel_id(), td_api::make_object<td_api::supergroupMembersFilterRecent>(), string(), 0,
               200, 200, PromiseCreator::lambda([query_promise = std::move(query_promise)](DialogParticipants) mutable {
@@ -18387,8 +18392,10 @@ void MessagesManager::get_dialog_info_full(DialogId dialog_id, Promise<Unit> &&p
                          std::move(promise), source);
       return;
     case DialogType::Channel:
-      send_closure_later(td_->contacts_manager_actor_, &ContactsManager::load_channel_full, dialog_id.get_channel_id(),
-                         false, std::move(promise), source);
+      if (!G()->get_option_boolean("disable_channels")) {
+        send_closure_later(td_->contacts_manager_actor_, &ContactsManager::load_channel_full,
+                           dialog_id.get_channel_id(), false, std::move(promise), source);
+      }
       return;
     case DialogType::SecretChat:
       return promise.set_value(Unit());
@@ -18556,7 +18563,9 @@ void MessagesManager::get_messages_from_server(vector<FullMessageId> &&message_i
         ordinary_message_ids.push_back(std::move(input_message));
         break;
       case DialogType::Channel:
-        channel_message_ids[dialog_id.get_channel_id()].push_back(std::move(input_message));
+        if (!G()->get_option_boolean("disable_channels")) {
+          channel_message_ids[dialog_id.get_channel_id()].push_back(std::move(input_message));
+        }
         break;
       case DialogType::SecretChat:
         LOG(ERROR) << "Can't get " << full_message_id << " from server from " << source;
@@ -38049,6 +38058,10 @@ class MessagesManager::GetChannelDifferenceLogEvent {
 
 void MessagesManager::get_channel_difference(DialogId dialog_id, int32 pts, bool force, const char *source,
                                              bool is_old) {
+  if (G()->get_option_boolean("disable_channels")) {
+    return;
+  }
+
   if (channel_get_difference_retry_timeout_.has_timeout(dialog_id.get())) {
     LOG(INFO) << "Skip running channels.getDifference for " << dialog_id << " from " << source
               << " because it is scheduled for later time";
@@ -38096,6 +38109,10 @@ void MessagesManager::get_channel_difference(DialogId dialog_id, int32 pts, bool
 void MessagesManager::do_get_channel_difference(DialogId dialog_id, int32 pts, bool force,
                                                 tl_object_ptr<telegram_api::InputChannel> &&input_channel, bool is_old,
                                                 const char *source) {
+  if (G()->get_option_boolean("disable_channels")) {
+    return;
+  }
+
   auto inserted = active_get_channel_differencies_.emplace(dialog_id, source);
   if (!inserted.second) {
     LOG(INFO) << "Skip running channels.getDifference for " << dialog_id << " from " << source

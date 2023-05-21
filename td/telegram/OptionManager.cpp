@@ -665,6 +665,9 @@ void OptionManager::set_option(const string &name, td_api::object_ptr<td_api::Op
       if (set_boolean_option("disable_minithumbnails")) {
         return;
       }
+      if (set_boolean_option("disable_channels")) {
+        return;
+      }
       if (set_boolean_option("disable_notifications")) {
         return;
       }
