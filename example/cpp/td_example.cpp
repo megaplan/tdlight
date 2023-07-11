@@ -8,6 +8,13 @@
 #include <td/telegram/td_api.h>
 #include <td/telegram/td_api.hpp>
 
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/stat.h>        /* For mode constants */
+#include <fcntl.h>           /* For O_* constants */
+#include <stdio.h>
+#include <string.h>
+
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -20,6 +27,9 @@
 // Simple single-threaded example of TDLib usage.
 // Real world programs should use separate thread for the user input.
 // Example includes user authentication, receiving updates, getting chat list and sending text messages.
+
+const std::size_t SHARED_MEMORY_OBJECT_SIZE = 4096;
+const char * SHARED_MEMORY_OBJECT_NAME = "tdlib_shared_key_data";
 
 // overloaded
 namespace detail {
@@ -49,6 +59,12 @@ auto overloaded(F... f) {
 
 namespace td_api = td::td_api;
 
+const char* database_directory_ = "tdlib";
+int32_t app_id = 94575;
+std::string app_hash = "a3406de8d171bb422bb6ddf3bbd800e2";
+
+int result = 100;
+
 class TdExample {
  public:
   TdExample() {
@@ -65,6 +81,7 @@ class TdExample {
       } else if (!are_authorized_) {
         process_response(client_manager_->receive(10));
       } else {
+          return;
         std::cout << "Enter action [q] quit [u] check for updates and request results [c] show chats [m <chat_id> "
                      "<text>] send message [me] show self [l] logout: "
                   << std::endl;
@@ -242,7 +259,9 @@ class TdExample {
                           overloaded(
                               [this](td_api::authorizationStateReady &) {
                                 are_authorized_ = true;
-                                std::cout << "Authorization is completed" << std::endl;
+                                result = 0;
+                                // std::cout << "Authorization is completed" << std::endl;
+                                return;
                               },
                               [this](td_api::authorizationStateLoggingOut &) {
                                 are_authorized_ = false;
@@ -256,6 +275,7 @@ class TdExample {
                               },
                               [this](td_api::authorizationStateWaitPhoneNumber &) {
                                 std::cout << "Enter phone number: " << std::flush;
+                                exit(result); return;
                                 std::string phone_number;
                                 std::cin >> phone_number;
                                 send_query(
@@ -264,6 +284,7 @@ class TdExample {
                               },
                               [this](td_api::authorizationStateWaitEmailAddress &) {
                                 std::cout << "Enter email address: " << std::flush;
+                                exit(result); return;
                                 std::string email_address;
                                 std::cin >> email_address;
                                 send_query(td_api::make_object<td_api::setAuthenticationEmailAddress>(email_address),
@@ -271,6 +292,7 @@ class TdExample {
                               },
                               [this](td_api::authorizationStateWaitEmailCode &) {
                                 std::cout << "Enter email authentication code: " << std::flush;
+                                exit(result); return;
                                 std::string code;
                                 std::cin >> code;
                                 send_query(td_api::make_object<td_api::checkAuthenticationEmailCode>(
@@ -279,6 +301,7 @@ class TdExample {
                               },
                               [this](td_api::authorizationStateWaitCode &) {
                                 std::cout << "Enter authentication code: " << std::flush;
+                                exit(result); return;
                                 std::string code;
                                 std::cin >> code;
                                 send_query(td_api::make_object<td_api::checkAuthenticationCode>(code),
@@ -288,6 +311,7 @@ class TdExample {
                                 std::string first_name;
                                 std::string last_name;
                                 std::cout << "Enter your first name: " << std::flush;
+                                exit(result); return;
                                 std::cin >> first_name;
                                 std::cout << "Enter your last name: " << std::flush;
                                 std::cin >> last_name;
@@ -296,6 +320,7 @@ class TdExample {
                               },
                               [this](td_api::authorizationStateWaitPassword &) {
                                 std::cout << "Enter authentication password: " << std::flush;
+                                exit(result); return;
                                 std::string password;
                                 std::getline(std::cin, password);
                                 send_query(td_api::make_object<td_api::checkAuthenticationPassword>(password),
@@ -303,14 +328,15 @@ class TdExample {
                               },
                               [this](td_api::authorizationStateWaitOtherDeviceConfirmation &state) {
                                 std::cout << "Confirm this login link on another device: " << state.link_ << std::endl;
+                                exit(result); return;
                               },
                               [this](td_api::authorizationStateWaitTdlibParameters &) {
                                 auto request = td_api::make_object<td_api::setTdlibParameters>();
-                                request->database_directory_ = "tdlib";
+                                request->database_directory_ = database_directory_;
                                 request->use_message_database_ = true;
                                 request->use_secret_chats_ = true;
-                                request->api_id_ = 94575;
-                                request->api_hash_ = "a3406de8d171bb422bb6ddf3bbd800e2";
+                                request->api_id_ = app_id;
+                                request->api_hash_ = app_hash;
                                 request->system_language_code_ = "en";
                                 request->device_model_ = "Desktop";
                                 request->application_version_ = "1.0";
@@ -332,7 +358,13 @@ class TdExample {
   }
 };
 
-int main() {
+int main(int argc, char* argv[]) {
+  if (argc > 1) {
+      database_directory_ = argv[1];
+  }
+
   TdExample example;
   example.loop();
+  
+  return result;
 }

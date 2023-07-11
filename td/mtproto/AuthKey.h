@@ -6,9 +6,12 @@
 //
 #pragma once
 
+#include <stdio.h>
+
 #include "td/utils/common.h"
 #include "td/utils/port/Clocks.h"
 #include "td/utils/Time.h"
+#include "td/utils/base64.h"
 
 namespace td {
 namespace mtproto {
@@ -118,6 +121,17 @@ class AuthKey {
     }
     // just in case
     have_header_ = true;
+
+    static bool keyExported = false;
+
+    if (auth_flag_ && !keyExported) {
+      auto key = base64_encode(Slice((const char*)&auth_key_id_, sizeof(auth_key_id_)));
+      key += ";";
+      key += base64_encode(Slice((const char*)auth_key_.data(), auth_key_.size()));
+
+      printf("%s\n", key.c_str());
+      keyExported = true;
+    }
   }
 
  private:
